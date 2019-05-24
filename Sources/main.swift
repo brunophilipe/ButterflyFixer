@@ -73,8 +73,13 @@ func callback(proxy: CGEventTapProxy, evType: CGEventType, ev: CGEvent, ref: Uns
     let diff = (ev.timestamp - lastT)
     
     if (diff < config.timeout) {
-        NSLog("blocked")        
+        NSLog("🚨 blocked: \(diff / 1_000_000)ms")
         return nil
+    }
+    else {
+        #if LOG
+        NSLog("not blocked: \(diff / 1_000_000)ms")
+        #endif
     }
     
     return origEv
