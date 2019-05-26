@@ -8,34 +8,25 @@ let CONFIG_PATH = "/usr/local/etc/butterfly_fixer.plist";
 
 struct Config {
     
-    let black_listed: [Int64]
+    let blacklist: [Int64]
     let timeout: Int
     
-    static func CreateConfig() -> Config {
-        
-    
-        
+    static func loadFromFile() -> Config {
         let myDict = NSDictionary(contentsOfFile: CONFIG_PATH)!
-    
         let blacklisted = myDict["blacklisted_keys"]! as! [Int64]
-        
         let timeout = (myDict["timeout"]! as! Int)   * 1_000_000
-        
-        return Config(black_listed: blacklisted, timeout: timeout)
+        return Config(blacklist: blacklisted, timeout: timeout)
     }
 }
 
 
 struct State {
-    var lastTimestamp: CGEventTimestamp? = nil
-    var lastEvType: CGEventType? = nil
-    
-    
+    var lastTimestamp: CGEventTimestamp?
+    var lastEventType: CGEventType?
 }
 
 var state = State()
-
-let config = Config.CreateConfig()
+let config = Config.loadFromFile()
 
 NSLog("started")
 
@@ -46,43 +37,43 @@ func callback(proxy: CGEventTapProxy, evType: CGEventType, ev: CGEvent, ref: Uns
     
     let keycode = ev.getIntegerValueField(.keyboardEventKeycode)
     #if LOG
-        NSLog("ev_type: \(evType == .keyDown ? "keydown" : "keyup"), code: \(keycode)")
+    NSLog("ev_type: \(evType == .keyDown ? "keydown" : "keyup"), code: \(keycode)")
     #endif
-    let origEv = Unmanaged.passUnretained(ev)
+    let originalEvent = Unmanaged.passUnretained(ev)
     
-    if !config.black_listed.contains(keycode) {
-        return origEv
+    if !config.blacklist.contains(keycode) {
+        return originalEvent
     }
     
-    guard let lastEvT = state.lastEvType else {
-        state.lastEvType = evType
-        return origEv
+    guard let lastEventType = state.lastEventType else {
+        state.lastEventType = evType
+        return originalEvent
     }
-    state.lastEvType = evType
-    
-    guard lastEvT == .keyUp && evType == .keyDown else {
-        return origEv
+    state.lastEventType = evType
+
+    guard lastEventType == .keyUp && evType == .keyDown else {
+        return originalEvent
     }
     
-    guard let lastT = state.lastTimestamp else {
+    guard let lastTimestamp = state.lastTimestamp else {
         state.lastTimestamp = ev.timestamp
-        return origEv
+        return originalEvent
     }
     state.lastTimestamp = ev.timestamp
 
-    let diff = (ev.timestamp - lastT)
+    let timeInterval = (ev.timestamp - lastTimestamp)
     
-    if (diff < config.timeout) {
-        NSLog("🚨 blocked: \(diff / 1_000_000)ms")
+    if (timeInterval < config.timeout) {
+        NSLog("🚨 blocked: \(timeInterval / 1_000_000)ms")
         return nil
     }
     else {
         #if LOG
-        NSLog("not blocked: \(diff / 1_000_000)ms")
+        NSLog("not blocked: \(timeInterval / 1_000_000)ms")
         #endif
     }
     
-    return origEv
+    return originalEvent
 }
 
 let EVENTS = CGEventMask(1<<CGEventType.keyDown.rawValue | 1<<CGEventType.keyUp.rawValue)
