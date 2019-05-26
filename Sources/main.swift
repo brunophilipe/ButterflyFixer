@@ -23,6 +23,7 @@ struct Config {
 struct State {
     var lastTimestamp: CGEventTimestamp?
     var lastEventType: CGEventType?
+    var lastEventKeyCode: Int64?
 }
 
 var state = State()
@@ -51,6 +52,12 @@ func callback(proxy: CGEventTapProxy, evType: CGEventType, ev: CGEvent, ref: Uns
     }
     state.lastEventType = evType
 
+    guard let lastEventKeyCode = state.lastEventKeyCode, lastEventKeyCode == keycode else {
+        state.lastEventKeyCode = keycode
+        return originalEvent
+    }
+    state.lastEventKeyCode = keycode
+    
     guard lastEventType == .keyUp && evType == .keyDown else {
         return originalEvent
     }
