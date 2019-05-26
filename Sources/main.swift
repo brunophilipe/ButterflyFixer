@@ -52,13 +52,13 @@ func callback(proxy: CGEventTapProxy, evType: CGEventType, ev: CGEvent, ref: Uns
     }
     state.lastEventType = evType
 
-    guard let lastEventKeyCode = state.lastEventKeyCode, lastEventKeyCode == keycode else {
+    guard let lastEventKeyCode = state.lastEventKeyCode else {
         state.lastEventKeyCode = keycode
         return originalEvent
     }
     state.lastEventKeyCode = keycode
     
-    guard lastEventType == .keyUp && evType == .keyDown else {
+    guard lastEventType == .keyUp, evType == .keyDown, lastEventKeyCode == keycode else {
         return originalEvent
     }
     
